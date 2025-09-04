@@ -6,7 +6,7 @@ A simple utility to extract technical and embedded metadata from media files, es
 Install the library using **uv**:
 
 ```bash
-uv pip install git+[https://github.com/GoWithitRoger/media-meta.git](https://github.com/GoWithitRoger/media-meta.git)
+uv pip install git+https://github.com/GoWithitRoger/media-meta.git
 ```
 
 > **Note:** If you use `pip`, the equivalent command is: `pip install git+https://github.com/GoWithitRoger/media-meta.git`
