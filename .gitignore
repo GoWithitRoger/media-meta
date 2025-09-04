@@ -22,3 +22,6 @@ build/
 # Testing
 .pytest_cache/
 .ty_cache/
+
+# Repomix
+repomix-output.xml
