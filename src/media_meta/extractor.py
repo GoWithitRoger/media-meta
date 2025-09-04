@@ -6,7 +6,7 @@ from typing import Any
 
 from dateutil.parser import parse as parse_datetime
 from mutagen import File as MutagenFile
-from mutagen import MutagenError
+from mutagen import FileType, MutagenError
 
 __all__ = ["extract_metadata"]
 
@@ -36,7 +36,7 @@ def _parse_tag_date(date_string: str) -> str | None:
         return None
 
 
-def _get_recorded_on(media_file: Any) -> str | None:
+def _get_recorded_on(media_file: FileType | None) -> str | None:
     """Intelligently extracts and standardizes the recording date from metadata tags."""
     if not media_file or not media_file.tags:
         return None
