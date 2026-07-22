@@ -97,10 +97,8 @@ def extract_metadata(filepath: str | Path) -> dict[str, Any]:
         metadata["error"] = f"An unexpected error occurred: {e}"
 
     if not metadata["recorded_on"]:
-        try:
-            ts = path.stat().st_birthtime
-        except AttributeError:
-            ts = path.stat().st_mtime
+        stat_result = path.stat()
+        ts = getattr(stat_result, "st_birthtime", stat_result.st_mtime)
 
         metadata["recorded_on"] = datetime.datetime.fromtimestamp(
             ts, tz=datetime.timezone.utc

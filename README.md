@@ -1,54 +1,50 @@
 # Media Meta
 
-A simple utility to extract technical and embedded metadata from media files, especially the true "recorded on" date.
+A small Python utility for extracting technical metadata and a best-effort recording date from media
+files. It uses [Mutagen](https://mutagen.readthedocs.io/) for embedded tags and falls back to the
+filesystem date when no usable recording-date tag is present.
 
-## Installation
-Install the library using **uv**:
+This is a hobby project maintained on a best-effort basis. Media metadata varies widely between
+formats and recording tools, so callers should inspect `recorded_on_source` instead of assuming every
+date came from an embedded tag.
+
+## Install
+
+From GitHub:
 
 ```bash
-uv pip install git+https://github.com/GoWithitRoger/media-meta.git
+python -m pip install git+https://github.com/GoWithitRoger/media-meta.git
 ```
 
-> **Note:** If you use `pip`, the equivalent command is: `pip install git+https://github.com/GoWithitRoger/media-meta.git`
+For development:
+
+```bash
+git clone https://github.com/GoWithitRoger/media-meta.git
+cd media-meta
+uv sync --all-extras --locked
+```
 
 ## Usage
-Python
-    
+
 ```python
 from media_meta import extract_metadata
 
-metadata = extract_metadata("/path/to/your/audio.wav")
-print(metadata)
+metadata = extract_metadata("/path/to/audio.wav")
+print(metadata["recorded_on"])
+print(metadata["recorded_on_source"])
 ```
-    
 
-## Contributing & Development Setup
-Interested in contributing? Follow these steps to set up a development environment.
+The result also includes the resolved path, filename, file size, modification time, and available
+duration, sample-rate, channel, bitrate, and format information.
 
-1. **Clone the repository:**
-
-```bash
-git clone [https://github.com/GoWithitRoger/media-meta.git](https://github.com/GoWithitRoger/media-meta.git)
-cd media-meta
-```
-    
-
-2. **Install dependencies:** This will install the library in editable mode along with all development tools (`ruff`, `pytest`, etc.).
-
-    - **With `uv` (Recommended):**
-
-```bash   
-uv sync --all-extras
-```   
-
-    - **With `pip`:**
+## Development
 
 ```bash
-pip install -e .[dev]
-```   
-
-3. **Run tests:** After setting up the environment, you can run the test suite to verify everything is working correctly.
-
-```bash
+uv run ruff check .
+uv run ty check
 uv run pytest
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
