@@ -1,12 +1,12 @@
 # Media Meta
 
-A small Python utility for extracting technical metadata and a best-effort recording date from media
-files. It uses [Mutagen](https://mutagen.readthedocs.io/) for embedded tags and falls back to the
-filesystem date when no usable recording-date tag is present.
+A small Python utility for extracting technical metadata and estimating a recording date from media
+files. It reads embedded tags with [Mutagen](https://mutagen.readthedocs.io/). If it cannot find a
+usable recording-date tag, it falls back to the filesystem date.
 
-This is a hobby project maintained on a best-effort basis. Media metadata varies widely between
-formats and recording tools, so callers should inspect `recorded_on_source` instead of assuming every
-date came from an embedded tag.
+I wrote this as a hobby utility. Media metadata varies widely between formats and recording tools, so
+callers should inspect `recorded_on_source` instead of assuming every date came from an embedded
+tag.
 
 ## Install
 
