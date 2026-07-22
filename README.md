@@ -4,8 +4,8 @@ A small Python utility for extracting technical metadata and estimating a record
 files. It reads embedded tags with [Mutagen](https://mutagen.readthedocs.io/). If it cannot find a
 usable recording-date tag, it falls back to the filesystem date.
 
-I wrote this as a hobby utility. Media metadata varies widely between formats and recording tools, so
-callers should inspect `recorded_on_source` instead of assuming every date came from an embedded
+This is a hobby utility. Media metadata varies widely between formats and recording tools, so callers
+should inspect `recorded_on_source` instead of assuming every date came from an embedded
 tag.
 
 ## Install
