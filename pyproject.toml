@@ -1,6 +1,6 @@
 [project]
 name = "media-meta"
-version = "0.1.0"
+version = "0.2.0"
 description = "A utility to extract metadata from media files."
 license = "MIT"
 readme = "README.md"
@@ -20,6 +20,9 @@ build-backend = "hatchling.build"
 [project.urls]
 Homepage = "https://github.com/GoWithitRoger/media-meta"
 Issues = "https://github.com/GoWithitRoger/media-meta/issues"
+
+[project.scripts]
+media-meta = "media_meta.cli:main"
 
 [project.optional-dependencies]
 dev = [

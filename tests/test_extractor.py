@@ -14,24 +14,25 @@ def test_extract_metadata_file_not_found():
         extract_metadata("non_existent_file.wav")
 
 
-def test_fallback_to_filesystem_date(tmp_path: Path):
-    """Verify it uses filesystem time when no tags are present."""
+def test_filesystem_time_is_only_a_candidate(tmp_path: Path):
+    """Verify filesystem time does not become authoritative recorded_on."""
     fake_file = tmp_path / "test.wav"
     fake_file.touch()
 
     metadata = extract_metadata(fake_file)
 
-    assert metadata["recorded_on_source"] == "filesystem_fallback"
-    assert "recorded_on" in metadata
+    assert metadata["recorded_on_source"] == "none"
+    assert metadata["recorded_on"] is None
+    assert metadata["filesystem_time_candidate"]["confidence"] == "low"
     assert metadata["filename"] == "test.wav"
 
 
 @pytest.mark.parametrize(
     "input_str, expected_iso",
     [
-        ("2024-09-04T10:30:00", "2024-09-04T10:30:00+00:00"),
-        ("2023-01-15", "2023-01-15T00:00:00+00:00"),
-        ("2022", "2022-01-01T00:00:00+00:00"),
+        ("2024-09-04T10:30:00", "2024-09-04T10:30:00"),
+        ("2023-01-15", "2023-01-15"),
+        ("2022", "2022"),
     ],
 )
 def test_parse_tag_date(input_str, expected_iso):
@@ -68,6 +69,7 @@ def test_extract_metadata_from_tags(tmp_path: Path):
 
     # 4. Assert the results
     assert metadata["recorded_on_source"] == "tag"
-    assert metadata["recorded_on"] == "2023-05-10T14:22:00+00:00"
+    assert metadata["recorded_on"] == "2023-05-10T14:22:00"
+    assert metadata["recorded_on_observation"]["timezone_status"] == "naive"
     assert metadata["duration_seconds"] == 120.5
     assert metadata["format"] == "MP3"
