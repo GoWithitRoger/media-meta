@@ -1,79 +1,86 @@
-# media-meta/src/media_meta/extractor.py
+"""Extract technical metadata and preservation-safe recording-date observations."""
+
+from __future__ import annotations
 
 import datetime
 from pathlib import Path
 from typing import Any
 
-from dateutil.parser import parse as parse_datetime
 from mutagen import File as MutagenFile
 from mutagen import FileType, MutagenError
 
+from .dates import DateObservation, parse_date_observation
+
 __all__ = ["extract_metadata"]
 
-# A comprehensive list of tags used for the recording date.
-_DATE_TAGS = [
-    "TDRC",
-    "\xa9day",
-    "TDOR",
-    "TDRL",
-    "DATE",
-    "TYER",
-    "TDAT",
-]
+_DATE_TAGS = ["TDRC", "©day", "TDOR", "TDRL", "DATE", "TYER", "TDAT"]
 
 
 def _parse_tag_date(date_string: str) -> str | None:
-    """Tries to parse a date string into a timezone-aware ISO 8601 format."""
-    try:
-        # The 'ignoretz=True' flag is crucial. Many tags lack timezone info,
-        # so we parse them as naive and then correctly assign UTC.
-        # Use a default date of 1-1-1 for missing components (day, month)
-        default_date = datetime.datetime(1, 1, 1)
-        dt_object: datetime.datetime
-        dt_object = parse_datetime(date_string, ignoretz=True, default=default_date)
-        return dt_object.replace(tzinfo=datetime.timezone.utc).isoformat()
-    except (ValueError, TypeError):
-        return None
+    """Backward-compatible normalized-value helper.
+
+    New callers should use :func:`parse_date_observation` to retain precision
+    and provenance details.
+    """
+
+    observation = parse_date_observation("unknown", date_string)
+    return observation.normalized_value
 
 
-def _get_recorded_on(media_file: FileType | None) -> str | None:
-    """Intelligently extracts and standardizes the recording date from metadata tags."""
+def _tag_values(value: object) -> list[object]:
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    return [value]
+
+
+def _date_observations(media_file: FileType | None) -> list[DateObservation]:
     if not media_file or not media_file.tags:
-        return None
-
+        return []
+    observations: list[DateObservation] = []
     for tag in _DATE_TAGS:
         try:
             if tag in media_file.tags:
-                value: Any = media_file.tags[tag]
-                raw_value = str(value[0] if isinstance(value, list) else value)
-                parsed_date = _parse_tag_date(raw_value.strip())
-                if parsed_date:
-                    return parsed_date
-        except (KeyError, IndexError):
+                for value in _tag_values(media_file.tags[tag]):
+                    observations.append(parse_date_observation(tag, value))
+        except (KeyError, IndexError, TypeError):
             continue
-    return None
+    return observations
+
+
+def _get_recorded_on(media_file: FileType | None) -> DateObservation | None:
+    """Return the first parseable date according to tag priority."""
+
+    return next((obs for obs in _date_observations(media_file) if obs.parseable), None)
 
 
 def extract_metadata(filepath: str | Path) -> dict[str, Any]:
-    """Extracts key technical and descriptive metadata from a media file."""
+    """Extract technical metadata and embedded date observations.
+
+    Filesystem timestamps are exposed only as an explicitly labeled candidate;
+    they are never promoted to the authoritative ``recorded_on`` value.
+    """
+
     path = Path(filepath)
     if not path.exists():
         raise FileNotFoundError(f"Media file not found: {path}")
 
+    stat = path.stat()
     metadata: dict[str, Any] = {
         "filepath": str(path.resolve()),
         "filename": path.name,
-        "file_size_bytes": path.stat().st_size,
+        "file_size_bytes": stat.st_size,
         "file_modified_on": datetime.datetime.fromtimestamp(
-            path.stat().st_mtime, tz=datetime.timezone.utc
+            stat.st_mtime, tz=datetime.timezone.utc
         ).isoformat(),
         "recorded_on": None,
         "recorded_on_source": "none",
+        "recorded_on_observation": None,
+        "date_observations": [],
+        "filesystem_time_candidate": None,
     }
 
     try:
         media_file = MutagenFile(path, easy=False)
-
         if media_file:
             info = media_file.info
             metadata.update(
@@ -85,24 +92,32 @@ def extract_metadata(filepath: str | Path) -> dict[str, Any]:
                     "format": media_file.__class__.__name__,
                 }
             )
-
-            recorded_on_date = _get_recorded_on(media_file)
-            if recorded_on_date:
-                metadata["recorded_on"] = recorded_on_date
+            observations = _date_observations(media_file)
+            metadata["date_observations"] = [obs.to_dict() for obs in observations]
+            selected = next((obs for obs in observations if obs.parseable), None)
+            if selected is not None:
+                metadata["recorded_on"] = selected.normalized_value
                 metadata["recorded_on_source"] = "tag"
+                metadata["recorded_on_observation"] = selected.to_dict()
+    except MutagenError as exc:
+        metadata["error"] = f"Could not process file with mutagen: {exc}"
+    except Exception as exc:
+        metadata["error"] = f"An unexpected error occurred: {exc}"
 
-    except MutagenError as e:
-        metadata["error"] = f"Could not process file with mutagen: {e}"
-    except Exception as e:
-        metadata["error"] = f"An unexpected error occurred: {e}"
-
-    if not metadata["recorded_on"]:
-        stat_result = path.stat()
-        ts = getattr(stat_result, "st_birthtime", stat_result.st_mtime)
-
-        metadata["recorded_on"] = datetime.datetime.fromtimestamp(
-            ts, tz=datetime.timezone.utc
+    if metadata["recorded_on"] is None:
+        timestamp = getattr(stat, "st_birthtime", None)
+        if timestamp is not None:
+            method = "filesystem_birthtime"
+        else:
+            timestamp = stat.st_mtime
+            method = "filesystem_mtime"
+        normalized = datetime.datetime.fromtimestamp(
+            timestamp, tz=datetime.timezone.utc
         ).isoformat()
-        metadata["recorded_on_source"] = "filesystem_fallback"
-
+        metadata["filesystem_time_candidate"] = {
+            "raw_value": str(timestamp),
+            "normalized_value": normalized,
+            "method": method,
+            "confidence": "low",
+        }
     return metadata
