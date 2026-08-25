@@ -152,12 +152,7 @@ def test_target_replacement_during_write_is_not_overwritten(
 
 def test_provenance_validation():
     with pytest.raises(ValueError):
-        SegmentProvenance(
-            **{
-                **_provenance().to_dict(),
-                "parent_sha256": "bad",
-            }
-        )
+        replace(_provenance(), parent_sha256="bad")
 
 
 def test_unknown_recording_time_removes_day_tags_and_roundtrips(synthetic_m4a: Path):

@@ -142,7 +142,7 @@ low-confidence filesystem candidate is populated.
 
 ```bash
 uv run ruff check .
-uv run ty check src
+uv run ty check
 uv run pytest
 ```
 
